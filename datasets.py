@@ -4,6 +4,7 @@ from transforms import *
 from masking_generator import TubeMaskingGenerator
 from kinetics import VideoClsDataset, VideoMAE
 from ssv2 import SSVideoClsDataset
+from dataset.frame_dataset import FrameDataset
 
 
 class DataAugmentationForVideoMAE(object):
@@ -37,19 +38,29 @@ class DataAugmentationForVideoMAE(object):
 
 def build_pretraining_dataset(args):
     transform = DataAugmentationForVideoMAE(args)
-    dataset = VideoMAE(
-        root=None,
-        setting=args.data_path,
-        video_ext='mp4',
-        is_color=True,
-        modality='rgb',
-        new_length=args.num_frames,
-        new_step=args.sampling_rate,
-        transform=transform,
-        temporal_jitter=False,
-        video_loader=True,
-        use_decord=True,
-        lazy_init=False)
+    if args.dataset_type == 'video':
+        dataset = VideoMAE(
+            root=args.video_root,
+            setting=args.data_path,
+            video_ext='mp4',
+            is_color=True,
+            modality='rgb',
+            new_length=args.num_frames,
+            new_step=args.sampling_rate,
+            transform=transform,
+            temporal_jitter=False,
+            video_loader=True,
+            use_decord=True,
+            lazy_init=False)
+    elif args.dataset_type == 'frame':
+        dataset = FrameDataset(
+            path_prefix=args.video_root,
+            frame_list=args.data_path,
+            frame_length=args.num_frames,
+            sampling_rate=args.sampling_rate,
+            transform=transform)
+    else:
+        raise NotImplementedError
     print("Data Aug = %s" % str(transform))
     return dataset
 

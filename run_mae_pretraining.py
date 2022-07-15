@@ -112,6 +112,9 @@ def get_args():
     parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+    parser.add_argument('--video_root', default=None, type=str)
+    parser.add_argument('--dataset_type', default='video', type=str)
+    parser.add_argument('--find_unused_param', action='store_true')
 
     return parser.parse_args()
 
@@ -196,7 +199,8 @@ def main(args):
     print("Number of training examples per epoch = %d" % (total_batch_size * num_training_steps_per_epoch))
 
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu],
+                                                          find_unused_parameters=args.find_unused_param)
         model_without_ddp = model.module
 
     optimizer = create_optimizer(
