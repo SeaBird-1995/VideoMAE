@@ -108,9 +108,7 @@ class FrameDataset(Dataset):
         for i in range(retry):
             imgs = []
             for image_path in image_paths:
-                with open(image_path, "rb") as f:
-                    buff = io.BytesIO(f.read())
-                img = Image.open(buff)
+                img = Image.open(image_path)
                 img = ImageOps.exif_transpose(img)
                 img = img.convert('RGB')
 
