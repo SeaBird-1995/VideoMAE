@@ -140,6 +140,7 @@ def main(args):
     print(args)
     # modify epochs by `repeated
     args.epochs = args.epochs // args.repeated
+    args.warmup_epochs = args.warmup_epochs // args.repeated
 
     device = torch.device(args.device)
 
