@@ -1,3 +1,4 @@
+from typing import Union
 from torch.utils.data import Dataset
 import os
 import io
@@ -8,8 +9,23 @@ import time
 import logging
 from PIL import Image, ImageOps
 from einops import rearrange
+from torch.utils.data._utils.collate import default_collate
 
 logger = logging.getLogger(__file__)
+
+
+def collate_repeated(batch: Union[tuple, list]):
+    """Collate function for repeated augmentation.
+    Args:
+        batch (tuple|list): data batch to collate
+    Returns:
+        (tuple): collated data batch
+    """
+    inputs, labels = zip(*batch)
+    inputs = [item for sublist in inputs for item in sublist]
+    labels = [item for sublist in labels for item in sublist]
+    inputs, labels = default_collate(inputs), default_collate(labels)
+    return inputs, labels
 
 
 def load_image_lists(frame_list_file, prefix="", return_list=False):
@@ -63,13 +79,15 @@ class FrameDataset(Dataset):
                  frame_list,
                  frame_length=16,
                  sampling_rate=2,
-                 transform=None
+                 transform=None,
+                 repeated=1,
                  ):
         logger.info("Loading frame list from {}".format(frame_list))
         self._path_to_frames, _ = load_image_lists(frame_list, prefix=path_prefix, return_list=True)
         self.frame_length = frame_length
         self.sampling_rate = sampling_rate
         self.transform = transform
+        self.repeated = repeated
 
     def __getitem__(self, item):
         frame_paths = self._path_to_frames[item]
@@ -77,9 +95,13 @@ class FrameDataset(Dataset):
         selected_frame_indices = self._sample_train_indices(duration)
         images = self.retry_load_images([frame_paths[frame] for frame in selected_frame_indices])
 
-        process_data, mask = self.transform((images, None))  # T*C,H,W
-        process_data = rearrange(process_data, '(t c) h w -> c t h w', t=self.frame_length)
-        return process_data, mask
+        out_data_list, out_mask_list = [], []
+        for i in range(self.repeated):
+            process_data, mask = self.transform((images, None))  # T*C,H,W
+            process_data = rearrange(process_data, '(t c) h w -> c t h w', t=self.frame_length)
+            out_data_list.append(process_data)
+            out_mask_list.append(mask)
+        return out_data_list, out_mask_list
 
     def __len__(self):
         return len(self._path_to_frames)

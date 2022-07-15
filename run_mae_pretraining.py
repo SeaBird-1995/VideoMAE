@@ -14,7 +14,7 @@ from engine_for_pretraining import train_one_epoch
 from utils import NativeScalerWithGradNormCount as NativeScaler
 import utils
 import modeling_pretrain
-
+from dataset.frame_dataset import collate_repeated
 
 def get_args():
     parser = argparse.ArgumentParser('VideoMAE pre-training script', add_help=False)
@@ -112,9 +112,12 @@ def get_args():
     parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+
+    # new params
     parser.add_argument('--video_root', default=None, type=str)
     parser.add_argument('--dataset_type', default='video', type=str)
     parser.add_argument('--find_unused_param', action='store_true')
+    parser.add_argument('--repeated', default=1, type=int)
 
     return parser.parse_args()
 
@@ -135,6 +138,8 @@ def main(args):
     utils.init_distributed_mode(args)
 
     print(args)
+    # modify epochs by `repeated
+    args.epochs = args.epochs // args.repeated
 
     device = torch.device(args.device)
 
@@ -174,11 +179,12 @@ def main(args):
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
-        batch_size=args.batch_size,
+        batch_size=args.batch_size // args.repeated,
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
         drop_last=True,
-        worker_init_fn=utils.seed_worker
+        worker_init_fn=utils.seed_worker,
+        collate_fn=collate_repeated
     )
 
     model.to(device)

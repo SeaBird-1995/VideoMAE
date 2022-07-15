@@ -58,6 +58,7 @@ def build_pretraining_dataset(args):
             frame_list=args.data_path,
             frame_length=args.num_frames,
             sampling_rate=args.sampling_rate,
+            repeated=args.repeated,
             transform=transform)
     else:
         raise NotImplementedError
