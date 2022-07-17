@@ -103,17 +103,17 @@ def build_dataset(is_train, test_mode, args):
         anno_path = None
         if is_train is True:
             mode = 'train'
-            anno_path = os.path.join(args.data_path, 'train.csv')
+            anno_path = os.path.join(args.data_path, 'sthv2_train_list_videos.txt')
         elif test_mode is True:
             mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
+            anno_path = os.path.join(args.data_path, 'sthv2_val_list_videos.txt')
         else:  
             mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            anno_path = os.path.join(args.data_path, 'sthv2_val_list_videos.txt')
 
         dataset = SSVideoClsDataset(
             anno_path=anno_path,
-            data_path='/',
+            data_path=args.video_root,
             mode=mode,
             clip_len=1,
             num_segment=args.num_frames,
