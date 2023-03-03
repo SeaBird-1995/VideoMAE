@@ -190,6 +190,10 @@ class ViPCMultiViewDataset(ViPCDataLoader):
                  mask_ratio=0.125):
         super(ViPCMultiViewDataset, self).__init__(
             filepath, data_path, status, pc_input_num, view_align, category)
+
+        ## only containing the unique objects
+        self.key = list(set([k.split(';')[0]+';'+k.split(';')[1] for k in self.key]))
+        print(f'{status} unique objects num: {len(self.key)}')
         
         self.num_views = num_views
         
@@ -199,14 +203,8 @@ class ViPCMultiViewDataset(ViPCDataLoader):
     def __getitem__(self, idx):
         
         key = self.key[idx]
-        category_id, object_id, view_id = key.strip().split(';')
+        category_id, object_id = key.strip().split(';')
        
-        pc_part_path = os.path.join(self.imcomplete_path, category_id, object_id, f'{view_id}.dat')
-        pc_gt_path = os.path.join(self.gt_path, category_id, object_id, f'{view_id}.dat')
-        if not os.path.exists(pc_gt_path):
-            # print(f"[WARNING] {pc_path} is not exist....")
-            return None
-        
         ### Randomly select several view images
         image_view_ids = random.sample(range(24), self.num_views)
 
@@ -223,32 +221,10 @@ class ViPCMultiViewDataset(ViPCDataLoader):
         views = views.permute(1, 0, 2, 3)  # to (3, T, H, W)
         view_camera_params = camera_meta_info[image_view_ids]  # (T, 3)
 
-        # load partial points
-        with open(pc_part_path,'rb') as f:
-            pc_part = pickle.load(f).astype(np.float32)
-        
-        # load gt points
-        with open(pc_gt_path,'rb') as f:
-            pc = pickle.load(f).astype(np.float32)
-        
-        # incase some item point number less than 3500 
-        if pc_part.shape[0] < self.pc_input_num:
-            pc_part = np.repeat(pc_part,(self.pc_input_num//pc_part.shape[0])+1,axis=0)[0:self.pc_input_num]
-
-        # normalize partial point cloud and GT to the same scale
-        gt_mean = pc.mean(axis=0) 
-        pc = pc - gt_mean
-        pc_L_max = np.max(np.sqrt(np.sum(abs(pc ** 2), axis=-1)))
-        pc = pc/pc_L_max
-
-        pc_part = pc_part - gt_mean
-        pc_part = pc_part/pc_L_max
-
         mask = self.masked_position_generator()
         return {'process_data': (views, mask),
-                'view_cam_params': torch.from_numpy(view_camera_params).to(torch.float32),
-                'pc_gt': torch.from_numpy(pc), 
-                'pc_partial': torch.from_numpy(pc_part)}  # pc: (N, 3), pc_part: (N, 3)
+                'view_cam_params': torch.from_numpy(view_camera_params).to(torch.float32)
+                } 
 
 
 if __name__ == "__main__":
@@ -256,7 +232,8 @@ if __name__ == "__main__":
     import numpy as np
 
     multi_view_dataset = ViPCMultiViewDataset(
-        'datasets/train_list2.txt', data_path="datasets/ShapeNetViPC-Dataset", status="train", category="car", num_views=5)
+        'datasets/train_list2.txt', data_path="datasets/ShapeNetViPC-Dataset", 
+        status="train", category="all", num_views=5)
     print(len(multi_view_dataset))
     # views, pc_gt, pc_partial = multi_view_dataset[0]
     # print(views.shape, pc_gt.shape, pc_partial.shape)

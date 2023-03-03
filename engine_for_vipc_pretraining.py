@@ -50,7 +50,6 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
 
             if normlize_target:
                 videos_squeeze = rearrange(unnorm_videos, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2) c', p0=1, p1=patch_size, p2=patch_size)
-                print(videos_squeeze.shape, "---")
                 videos_norm = (videos_squeeze - videos_squeeze.mean(dim=-2, keepdim=True)
                     ) / (videos_squeeze.var(dim=-2, unbiased=True, keepdim=True).sqrt() + 1e-6)
                 # we find that the mean is about 0.48 and standard deviation is about 0.08.

@@ -15,7 +15,7 @@ def build_pretraining_dataset(args):
             filepath=args.data_path,
             data_path=args.video_root,
             num_views=args.num_frames,
-            category='car',
+            category='all',
             status='train',
             mask_ratio=args.mask_ratio)
     else:
