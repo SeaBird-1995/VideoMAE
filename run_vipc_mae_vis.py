@@ -57,7 +57,7 @@ def get_args():
     parser = argparse.ArgumentParser('VideoMAE visualization reconstruction script', add_help=False)
     parser.add_argument('img_path', type=str, help='input video path')
     parser.add_argument('save_path', type=str, help='save video path')
-    parser.add_argument('model_path', type=str, help='checkpoint path of model')
+    parser.add_argument('model_path', default=None, type=str, help='checkpoint path of model')
     parser.add_argument('--mask_type', default='random', choices=['random', 'tube'],
                         type=str, help='masked strategy of video tokens/patches')
     parser.add_argument('--num_frames', type=int, default= 16)
@@ -107,8 +107,8 @@ def main(args):
     args.patch_size = patch_size
 
     model.to(device)
-    # checkpoint = torch.load(args.model_path, map_location='cpu')
-    # model.load_state_dict(checkpoint['model'])
+    checkpoint = torch.load(args.model_path, map_location='cpu')
+    model.load_state_dict(checkpoint['model'])
     model.eval()
 
     if args.save_path:

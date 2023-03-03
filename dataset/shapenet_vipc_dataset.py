@@ -23,6 +23,7 @@ import random
 import math 
 from tqdm import tqdm
 from masking_generator import FrameMaskingGenerator
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 
 def collate_fn(batch):
@@ -199,6 +200,8 @@ class ViPCMultiViewDataset(ViPCDataLoader):
         
         window_size = (num_views, 14, 14)
         self.masked_position_generator = FrameMaskingGenerator(window_size, mask_ratio)
+
+        self.normalize_transform = transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD)
     
     def __getitem__(self, idx):
         
@@ -216,6 +219,7 @@ class ViPCMultiViewDataset(ViPCDataLoader):
         for image_id in image_view_ids:
             image_path = os.path.join(view_dir, f'{image_id:02d}.png')
             view_img = self.transform(Image.open(image_path))[:3, ...]
+            view_img = self.normalize_transform(view_img)
             view_imgs.append(view_img)
         views = torch.stack(view_imgs, dim=0).to(torch.float32)  # (T, 3, H, W)
         views = views.permute(1, 0, 2, 3)  # to (3, T, H, W)

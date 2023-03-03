@@ -4,7 +4,7 @@ OUTPUT_DIR='experiments/vipc_test'
 # path to video for visualization
 VIDEO_PATH='TODO/TODO.mp4'
 # path to pretrain model
-MODEL_PATH='TODO/videomae_pretrain_base_patch16_224_frame_16x4_tube_mask_ratio_0.9_e1600/checkpoint-1599.pth'
+MODEL_PATH='experiments/videomae_pretrain_base_patch16_224_mask_one_view/checkpoint-9.pth'
 
 python run_vipc_mae_vis.py \
     --mask_ratio 0.9 \
