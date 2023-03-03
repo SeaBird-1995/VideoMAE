@@ -39,8 +39,11 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
                     param_group["weight_decay"] = wd_schedule_values[it]
 
         videos, bool_masked_pos = batch['process_data']
+        cam_pose_params = batch['view_cam_params']
+
         videos = videos.to(device, non_blocking=True)
         bool_masked_pos = bool_masked_pos.to(device, non_blocking=True).flatten(1).to(torch.bool)
+        cam_pose_params = cam_pose_params.to(device, non_blocking=True)
 
         with torch.no_grad():
             # calculate the predict label
@@ -61,7 +64,7 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
             labels = videos_patch[bool_masked_pos].reshape(B, -1, C)
 
         with torch.cuda.amp.autocast():
-            outputs = model(videos, bool_masked_pos)
+            outputs = model(videos, bool_masked_pos, cam_pose_params)
             loss = loss_func(input=outputs, target=labels)
 
         loss_value = loss.item()

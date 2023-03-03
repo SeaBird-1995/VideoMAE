@@ -249,5 +249,8 @@ if __name__ == "__main__":
         process_data = batch['process_data']
         views, mask = process_data
         print(views.shape, mask.shape)
+
+        view_cam_params = batch['view_cam_params']
+        print(view_cam_params.shape)
         break
     exit(0)

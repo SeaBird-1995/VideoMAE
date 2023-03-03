@@ -231,6 +231,8 @@ class PretrainVisionTransformer(nn.Module):
 
         self.pos_embed = get_sinusoid_encoding_table(self.encoder.patch_embed.num_patches, decoder_embed_dim)
 
+        self.cam_pose_embed = nn.Linear(3, decoder_embed_dim)
+
         trunc_normal_(self.mask_token, std=.02)
 
 
@@ -250,7 +252,7 @@ class PretrainVisionTransformer(nn.Module):
     def no_weight_decay(self):
         return {'pos_embed', 'cls_token', 'mask_token'}
 
-    def forward(self, x, mask):
+    def forward(self, x, mask, cam_view_pos):
         _, _, T, _, _ = x.shape
         x_vis = self.encoder(x, mask) # [B, N_vis, C_e]
         x_vis = self.encoder_to_decoder(x_vis) # [B, N_vis, C_d]
@@ -260,7 +262,14 @@ class PretrainVisionTransformer(nn.Module):
         expand_pos_embed = self.pos_embed.expand(B, -1, -1).type_as(x).to(x.device).clone().detach()
         pos_emd_vis = expand_pos_embed[~mask].reshape(B, -1, C)
         pos_emd_mask = expand_pos_embed[mask].reshape(B, -1, C)
-        x_full = torch.cat([x_vis + pos_emd_vis, self.mask_token + pos_emd_mask], dim=1) # [B, N, C_d]
+        
+        cam_pose_embed = self.cam_pose_embed(cam_view_pos)
+        cam_pose_embed = cam_pose_embed.unsqueeze(2).expand(-1, -1, 196, -1)  # (b, 8, 196, 384)
+        cam_pose_embed = cam_pose_embed.reshape(B, -1, C)
+        cam_pos_emd_vis = cam_pose_embed[~mask].reshape(B, -1, C)
+        cam_pos_emd_mask = cam_pose_embed[mask].reshape(B, -1, C)
+
+        x_full = torch.cat([x_vis + pos_emd_vis + cam_pos_emd_vis, self.mask_token + pos_emd_mask + cam_pos_emd_mask], dim=1) # [B, N, C_d]
         x = self.decoder(x_full, pos_emd_mask.shape[1]) # [B, N_mask, 3 * 16 * 16]
 
         return x
