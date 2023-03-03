@@ -18,7 +18,7 @@ from pathlib import Path
 from timm.models import create_model
 from optim_factory import create_optimizer
 from dataset.builder import build_pretraining_dataset
-from engine_for_pretraining import train_one_epoch
+from engine_for_vipc_pretraining import train_one_epoch
 from utils import NativeScalerWithGradNormCount as NativeScaler
 import utils
 import modeling_pretrain
@@ -137,7 +137,8 @@ def get_model(args):
         pretrained=False,
         drop_path_rate=args.drop_path,
         drop_block_rate=None,
-        decoder_depth=args.decoder_depth
+        decoder_depth=args.decoder_depth,
+        tubelet_size=1
     )
     return model
 
@@ -199,7 +200,6 @@ def main(args):
     model_without_ddp = model
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    print("Model = %s" % str(model_without_ddp))
     print('number of params: {} M'.format(n_parameters / 1e6))
 
     total_batch_size = args.batch_size * utils.get_world_size()
@@ -207,18 +207,13 @@ def main(args):
     args.lr = args.lr * total_batch_size / 256
     args.min_lr = args.min_lr * total_batch_size / 256
     args.warmup_lr = args.warmup_lr * total_batch_size / 256
-    print("LR = %.8f" % args.lr)
-    print("Batch size = %d" % total_batch_size)
-    print("Number of training steps = %d" % num_training_steps_per_epoch)
-    print("Number of training examples per epoch = %d" % (total_batch_size * num_training_steps_per_epoch))
 
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu],
                                                           find_unused_parameters=args.find_unused_param)
         model_without_ddp = model.module
 
-    optimizer = create_optimizer(
-        args, model_without_ddp)
+    optimizer = create_optimizer(args, model_without_ddp)
     loss_scaler = NativeScaler()
 
     print("Use step level LR & WD scheduler!")

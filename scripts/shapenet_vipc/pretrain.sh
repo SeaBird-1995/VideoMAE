@@ -10,9 +10,9 @@ OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=4 \
         --data_path ${DATA_PATH} \
         --mask_type tube \
         --mask_ratio 0.125 \
-        --model pretrain_videomae_base_patch16_224 \
+        --model pretrain_vipc_mae_base_patch16_224 \
         --decoder_depth 4 \
-        --batch_size 32 \
+        --batch_size 8 \
         --num_frames 8 \
         --sampling_rate 4 \
         --opt adamw \
