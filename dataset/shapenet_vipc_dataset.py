@@ -192,7 +192,7 @@ class ViPCMultiViewDataset(ViPCDataLoader):
             filepath, data_path, status, pc_input_num, view_align, category)
 
         ## only containing the unique objects
-        self.key = list(set([k.split(';')[0]+';'+k.split(';')[1] for k in self.key]))
+        self.key = sorted(list(set([k.split(';')[0]+';'+k.split(';')[1] for k in self.key])))
         print(f'{status} unique objects num: {len(self.key)}')
         
         self.num_views = num_views

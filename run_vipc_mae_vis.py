@@ -145,11 +145,10 @@ def main(args):
         #save original video
         mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, :, None, None, None]
         std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device)[None, :, None, None, None]
-        ori_img = img * std + mean  # in [0, 1]
-        print(ori_img.shape)
-        imgs = [ToPILImage()(ori_img[0,:,vid,:,:].cpu()) for vid in range(8)]
-        for id, im in enumerate(imgs):
-            im.save(f"{args.save_path}/ori_img{id}.jpg")
+        ori_img = img * std + mean  # in [0, 1], (b, 3, t, h, w)
+
+        ori_img_save = rearrange(ori_img, 'b c t h w -> b t c h w')
+        torchvision.utils.save_image(ori_img_save[0], f"{args.save_path}/ori_img_full.jpg", nrow=10, padding=2, normalize=True)
 
         img_squeeze = rearrange(ori_img, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2) c', p0=1, p1=patch_size[0], p2=patch_size[0])
         img_norm = (img_squeeze - img_squeeze.mean(dim=-2, keepdim=True)) / (img_squeeze.var(dim=-2, unbiased=True, keepdim=True).sqrt() + 1e-6)
@@ -167,16 +166,14 @@ def main(args):
         # Notice: To visualize the reconstruction video, we add the predict and the original mean and var of each patch.
         rec_img = rec_img * (img_squeeze.var(dim=-2, unbiased=True, keepdim=True).sqrt() + 1e-6) + img_squeeze.mean(dim=-2, keepdim=True)
         rec_img = rearrange(rec_img, 'b (t h w) (p0 p1 p2) c -> b c (t p0) (h p1) (w p2)', p0=1, p1=patch_size[0], p2=patch_size[1], h=14, w=14)
-        imgs = [ ToPILImage()(rec_img[0, :, vid, :, :].cpu().clamp(0,0.996)) for vid in range(8)]
 
-        for id, im in enumerate(imgs):
-            im.save(f"{args.save_path}/rec_img{id}.jpg")
+        rec_img_save = rearrange(rec_img, 'b c t h w -> b t c h w')
+        torchvision.utils.save_image(rec_img_save[0], f"{args.save_path}/rec_img_full.jpg", nrow=10, padding=2, normalize=True)
 
         #save masked video 
         img_mask = rec_img * mask
-        imgs = [ToPILImage()(img_mask[0, :, vid, :, :].cpu()) for vid in range(8)]
-        for id, im in enumerate(imgs):
-            im.save(f"{args.save_path}/mask_img{id}.jpg")
+        img_mask = rearrange(img_mask, 'b c t h w -> b t c h w')
+        torchvision.utils.save_image(img_mask[0], f"{args.save_path}/mask_img_full.jpg", nrow=10, padding=2, normalize=True)
 
 
 if __name__ == '__main__':
