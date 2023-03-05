@@ -1,10 +1,11 @@
 
 # Set the path to save video
-OUTPUT_DIR='experiments/vipc_test'
+OUTPUT_DIR='experiments/vipc_test_epoch_84'
 # path to video for visualization
 VIDEO_PATH='TODO/TODO.mp4'
 # path to pretrain model
-MODEL_PATH='experiments/videomae_pretrain_base_patch16_224_mask_one_view/checkpoint-9.pth'
+# MODEL_PATH='experiments/videomae_pretrain_base_patch16_224_mask_one_view/checkpoint-9.pth'
+MODEL_PATH="experiments/normalize_vipc_mae_pretrain_base_patch16_224_mask_one_view_total_epoch/checkpoint-84.pth"
 
 python run_vipc_mae_vis.py \
     --mask_ratio 0.9 \

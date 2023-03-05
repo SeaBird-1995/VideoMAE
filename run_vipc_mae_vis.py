@@ -103,7 +103,7 @@ def main(args):
     model = get_model(args)
     patch_size = model.encoder.patch_embed.patch_size
     print("Patch size = %s" % str(patch_size))
-    args.window_size = (args.num_frames // 2, args.input_size // patch_size[0], args.input_size // patch_size[1])
+    args.window_size = (args.num_frames // 1, args.input_size // patch_size[0], args.input_size // patch_size[1])
     args.patch_size = patch_size
 
     model.to(device)
@@ -114,15 +114,12 @@ def main(args):
     if args.save_path:
         Path(args.save_path).mkdir(parents=True, exist_ok=True)
     
-    tmp = np.arange(0,32, 2) + 60
-    frame_id_list = tmp.tolist()
-
     ## Get dataset
     test_dataset = ViPCMultiViewDataset("datasets/test_list2.txt",
                                         "datasets/ShapeNetViPC-Dataset",
                                         status="test")
     
-    entry = test_dataset[0]
+    entry = test_dataset[12000]
     process_data = entry['process_data']
     img, bool_masked_pos = process_data
     view_cam_params = entry['view_cam_params']
