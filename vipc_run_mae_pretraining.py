@@ -21,7 +21,7 @@ from dataset.builder import build_pretraining_dataset
 from engine_for_vipc_pretraining import train_one_epoch
 from utils import NativeScalerWithGradNormCount as NativeScaler
 import utils
-import modeling_pretrain
+import modeling_vipc_pretrain
 from dataset.frame_dataset import collate_repeated
 
 def get_args():

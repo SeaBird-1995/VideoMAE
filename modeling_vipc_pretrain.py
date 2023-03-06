@@ -315,31 +315,6 @@ class PretrainVisionTransformer(nn.Module):
 
 
 @register_model
-def pretrain_mae_small_patch16_224(pretrained=False, **kwargs):
-    model = PretrainVisionTransformer(
-        img_size=224,
-        patch_size=16,
-        encoder_embed_dim=384,
-        encoder_depth=12,
-        encoder_num_heads=6,
-        encoder_num_classes=0,
-        decoder_num_classes=1536, 
-        decoder_embed_dim=192, 
-        decoder_num_heads=3,
-        mlp_ratio=4,
-        qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs)
-    model.default_cfg = _cfg()
-    if pretrained:
-        checkpoint = torch.load(
-            kwargs["init_ckpt"], map_location="cpu"
-        )
-        model.load_state_dict(checkpoint["model"])
-    return model
-
-
-@register_model
 def pretrain_vipc_self_distillation(pretrained=False, **kwargs):
     model = PretrainVisionTransformer(
         img_size=224,
@@ -352,7 +327,6 @@ def pretrain_vipc_self_distillation(pretrained=False, **kwargs):
         decoder_embed_dim=256,
         decoder_num_heads=3,
         mlp_ratio=4, 
-        decoder_depth=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), 
         **kwargs)
