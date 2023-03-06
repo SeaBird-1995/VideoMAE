@@ -12,10 +12,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from functools import partial
+from einops import rearrange, repeat
 
 from modeling_finetune import Block, _cfg, PatchEmbed, get_sinusoid_encoding_table
 from timm.models.registry import register_model
 from timm.models.layers import trunc_normal_ as __call_trunc_normal_
+from timm.models.layers import drop_path, to_2tuple, trunc_normal_
 
 
 def trunc_normal_(tensor, mean=0., std=1.):
@@ -28,6 +30,33 @@ __all__ = [
 ]
 
 
+class OurPatchEmbed(nn.Module):
+    """ Image to Patch Embedding
+    """
+    def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, num_frames=8, tubelet_size=2):
+        super().__init__()
+        img_size = to_2tuple(img_size)
+        patch_size = to_2tuple(patch_size)
+        self.tubelet_size = int(tubelet_size)
+        num_patches = (img_size[1] // patch_size[1]) * (img_size[0] // patch_size[0])
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.num_patches = num_patches
+        self.proj = nn.Conv2d(in_channels=in_chans, out_channels=embed_dim, 
+                              kernel_size=(patch_size[0], patch_size[1]), 
+                              stride=(patch_size[0],  patch_size[1]))
+
+    def forward(self, x, **kwargs):
+        B, C, T, H, W = x.shape
+        # FIXME look at relaxing size constraints
+        assert H == self.img_size[0] and W == self.img_size[1], \
+            f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+        
+        x = rearrange(x, 'b c t h w -> (b t) c h w')
+        x = self.proj(x).flatten(2).transpose(2, 1)  # (B, c, h, w)
+        return x
+    
+
 class PretrainVisionTransformerEncoder(nn.Module):
     """ Vision Transformer with support for patch or hybrid CNN input stage
     """
@@ -38,7 +67,7 @@ class PretrainVisionTransformerEncoder(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
-        self.patch_embed = PatchEmbed(
+        self.patch_embed = OurPatchEmbed(
             img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim,tubelet_size=tubelet_size)
         num_patches = self.patch_embed.num_patches
 
@@ -93,6 +122,7 @@ class PretrainVisionTransformerEncoder(nn.Module):
         x = self.patch_embed(x)
         
         x = x + self.pos_embed.type_as(x).to(x.device).clone().detach()
+        x = rearrange(x, '(b t) n c -> b (t n) c', t=T)
 
         B, _, C = x.shape
         x_vis = x[~mask].reshape(B, -1, C) # ~mask means visible
@@ -267,7 +297,8 @@ class PretrainVisionTransformer(nn.Module):
         B, N, C = x_vis.shape
         # we don't unshuffle the correct visible token order, 
         # but shuffle the pos embedding accorddingly.
-        expand_pos_embed = self.pos_embed.expand(B, -1, -1).type_as(x).to(x.device).clone().detach()
+        expand_pos_embed = self.pos_embed.unsqueeze(1).expand(B, T, -1, -1).type_as(x).to(x.device).clone().detach()
+        expand_pos_embed = expand_pos_embed.reshape(B, -1, C)
         pos_emd_vis = expand_pos_embed[~mask].reshape(B, -1, C)
         pos_emd_mask = expand_pos_embed[mask].reshape(B, -1, C)
         
@@ -281,6 +312,7 @@ class PretrainVisionTransformer(nn.Module):
         x = self.decoder(x_full, pos_emd_mask.shape[1]) # [B, N_mask, 3 * 16 * 16]
 
         return x
+
 
 @register_model
 def pretrain_mae_small_patch16_224(pretrained=False, **kwargs):
@@ -308,7 +340,7 @@ def pretrain_mae_small_patch16_224(pretrained=False, **kwargs):
 
 
 @register_model
-def pretrain_vipc_mae_base_patch16_224(pretrained=False, **kwargs):
+def pretrain_vipc_self_distillation(pretrained=False, **kwargs):
     model = PretrainVisionTransformer(
         img_size=224,
         patch_size=16, 
@@ -320,6 +352,7 @@ def pretrain_vipc_mae_base_patch16_224(pretrained=False, **kwargs):
         decoder_embed_dim=256,
         decoder_num_heads=3,
         mlp_ratio=4, 
+        decoder_depth=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), 
         **kwargs)
