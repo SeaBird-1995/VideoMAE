@@ -15,7 +15,7 @@ from PIL import Image
 from pathlib import Path
 from timm.models import create_model
 import utils
-import modeling_pretrain
+import modeling_vipc_pretrain
 from torchvision.transforms import ToPILImage
 from einops import rearrange
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
